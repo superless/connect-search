@@ -34,7 +34,7 @@
    
    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage
    </TargetsForTfmSpecificBuildOutput>
-   <DocumentationFile>trifenix.connect.interfaces.xml</DocumentationFile>
+   <DocumentationFile>trifenix.connect.search.xml</DocumentationFile>
  </PropertyGroup>
 
  <Target Name="CopyProjectReferencesToPackage" DependsOnTargets="BuildOnlySettings;ResolveReferences">
