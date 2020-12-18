@@ -15,7 +15,7 @@ pool:
 variables: 
   BuildConfiguration: 'release'
   # nombre del archivo csproj
-  name-project: "trifenix-main"
+  name-project: "trifenix.connect.search"
 
 
 steps:

@@ -9,7 +9,7 @@ trigger:
 variables: 
   BuildConfiguration: 'release'
   # nombre del archivo csproj
-  name-project: "trifenix-main"
+  name-project: "trifenix.connect.search"
 
 pool:
   vmImage: 'ubuntu-latest'
