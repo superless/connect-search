@@ -1,5 +1,11 @@
-﻿using Microsoft.Azure.Search;
-using Microsoft.Azure.Search.Models;
+﻿
+using Azure;
+using Azure.Search.Documents;
+using Azure.Search.Documents.Indexes;
+using Azure.Search.Documents.Indexes.Models;
+using Azure.Search.Documents.Models;
+using Microsoft.Spatial;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using trifenix.connect.interfaces.search;
@@ -15,19 +21,16 @@ namespace trifenix.connect.search
     /// Esta clase no debiera ser testeada
     /// </summary>
     /// <typeparam name="GeoPointType">Tipo de dato para geolocalización</typeparam>
-    public class MainSearch<GeoPointType> : IBaseEntitySearch<GeoPointType>
+    public class MainSearch : IBaseEntitySearch<GeographyPoint>
     {
-        // cliente azure search
-        private readonly SearchServiceClient _search;
-
-        
 
 
-        // opciones cors
-        private readonly CorsOptions corsOptions;
+
+        private readonly SearchIndexClient _searchIndex;
+        private readonly SearchClient _search;
 
         // nombre del servicio en azure
-        public string ServiceName { get; private set; }
+        public string UriService { get; private set; }
 
 
         // clave del servicio en azure
@@ -38,18 +41,51 @@ namespace trifenix.connect.search
         public string Index { get; private set; }
 
 
-        public MainSearch(string SearchServiceName, string SearchServiceKey, string entityIndex, CorsOptions corsOptions)
+        /// <summary>
+        /// Constructor mainSearch
+        /// </summary>
+        /// <param name="uriService">endpoint de azure search</param>
+        /// <param name="SearchServiceKey">key</param>
+        /// <param name="entityIndex">índice del azure search</param>
+        public MainSearch(string uriService, string SearchServiceKey, string entityIndex)
         {
-            // cliente azure
-            _search = new SearchServiceClient(SearchServiceName, new SearchCredentials(SearchServiceKey));
-            
-            this.corsOptions = corsOptions;
+
+            _searchIndex = new SearchIndexClient(new Uri(uriService), new AzureKeyCredential(SearchServiceKey));
             this.Index = entityIndex;
-            this.ServiceName = SearchServiceName;
+
+            this.UriService = uriService;
             this.ServiceKey = SearchServiceKey;
 
-            if (!_search.Indexes.Exists(Index))
-                CreateOrUpdateIndex();
+            try
+            {
+                _searchIndex.GetIndex(entityIndex);
+            }
+            catch (RequestFailedException exc)
+            {
+                if (true)
+                {
+                    if (exc.Status == 404)
+                    {
+                        CreateOrUpdateIndex();
+                    }
+                    else
+                    {
+                        throw exc;
+                    }
+
+                };
+
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+
+
+
+
+            // cliente azure
+            _search = new SearchClient(new Uri(uriService), entityIndex, new AzureKeyCredential(SearchServiceKey));
 
         }
 
@@ -66,31 +102,48 @@ namespace trifenix.connect.search
             // validar que sea un elemento de tipo search.
             var indexName = Index;
 
-            // obtiene el client azure search de acuerdo al índice.
-            var indexClient = _search.Indexes.GetClient(indexName);
-
             // realiza la acción segun el argumento
-            var actions = elements.Select(o => operationType == SearchOperation.Add ? IndexAction.Upload(o) : IndexAction.Delete(o));
+            var actions = elements.Select(o => operationType == SearchOperation.Add ? IndexDocumentsAction.Upload(o) : IndexDocumentsAction.Delete(o)).ToArray();
 
             // preparando la ejecución
-            var batch = IndexBatch.New(actions);
+            var batch = IndexDocumentsBatch.Create(actions);
 
             // ejecución.
-            indexClient.Documents.Index(batch);
-
-            
-
+            _search.IndexDocuments(batch);
         }
+
+        private EntitySearch Convert(IEntitySearch<GeographyPoint> entity) => new EntitySearch
+        {
+            id = entity.id,
+            index = entity.index,
+            bl = entity.bl.Select(s => new BoolProperty { index = s.index, value = s.value }).ToArray(),
+            str = entity.str.Select(s => new StrProperty { index = s.index, value = s.value }).ToArray(),
+            enm = entity.enm.Select(s => new EnumProperty { index = s.index, value = s.value }).ToArray(),
+            dt = entity.dt.Select(s => new DtProperty { index = s.index, value = s.value }).ToArray(),
+            dbl = entity.dbl.Select(s => new DblProperty { index = s.index, value = s.value }).ToArray(),
+            rel = entity.rel.Select(s => new RelatedId { index = s.index, id = s.id }).ToArray(),
+            geo = entity.geo.Select(s => new GeoProperty { index = s.index, value = s.value }).ToArray(),
+            sug = entity.sug.Select(s => new StrProperty { index = s.index, value = s.value }).ToArray(),
+            num64 = entity.num64.Select(s => new Num64Property { index = s.index, value = s.value }).ToArray(),
+            num32 = entity.num32.Select(s => new Num32Property { index = s.index, value = s.value }).ToArray(),
+            hh = entity.hh,
+            hm = entity.hm,
+            created = entity.created,
+
+
+
+
+        };
 
         /// <summary>
         /// Añade elementos al search.
         /// </summary>
         /// <typeparam name="T">Esto debería ser EntitySearch</typeparam>
         /// <param name="elements"></param>
-        public void AddElements(List<IEntitySearch<GeoPointType>> elements)
+        public void AddElements(List<IEntitySearch<GeographyPoint>> elements)
         {
-            OperationElements(elements, SearchOperation.Add);
-            
+            OperationElements(elements.Select(Convert).ToList(), SearchOperation.Add);
+
         }
 
         /// <summary>
@@ -98,21 +151,21 @@ namespace trifenix.connect.search
         /// </summary>
         /// <typeparam name="T">Esto debería ser EntitySearch</typeparam>
         /// <param name="elements"></param>
-        public void AddElement(IEntitySearch<GeoPointType> element)
+        public void AddElement(IEntitySearch<GeographyPoint> element)
         {
-            OperationElements(new List<IEntitySearch<GeoPointType>> { element }, SearchOperation.Add);
-            
+            OperationElements(new List<IEntitySearch<GeographyPoint>> { element }.Select(Convert).ToList(), SearchOperation.Add);
+
         }
 
         /// <summary>
         /// Borra elementos desde el search.
         /// </summary>        
         /// <param name="elements">entidades a eliminar</param>
-        public void DeleteElements(List<IEntitySearch<GeoPointType>> elements)
+        public void DeleteElements(List<IEntitySearch<GeographyPoint>> elements)
         {
-           
+
             OperationElements(elements, SearchOperation.Delete);
-            
+
         }
 
         /// <summary>
@@ -120,13 +173,14 @@ namespace trifenix.connect.search
         /// </summary>
         /// <param name="filter">filtro de azure (Odata)</param>
         /// <returns>Entidades encontradas</returns>
-        public List<IEntitySearch<GeoPointType>> FilterElements(string filter)
+        public List<IEntitySearch<GeographyPoint>> FilterElements(string filter)
         {
-            var indexName = Index;
-            var indexClient = _search.Indexes.GetClient(indexName);
-            var result = indexClient.Documents.Search<IEntitySearch<GeoPointType>>(null, new SearchParameters { Filter = filter });
-
-            var filterResult = result.Results.Select(v => (IEntitySearch<GeoPointType>)new EntityBaseSearch<GeoPointType>
+            var filterOption = new SearchOptions()
+            {
+                Filter = filter
+            };
+            var result = _search.Search<EntitySearch>("*", filterOption);
+            var filterResult = result.Value.GetResults().Select(v => (IEntitySearch<GeographyPoint>)new EntityBaseSearch<GeographyPoint>
             {
                 bl = v.Document.bl,
                 created = v.Document.created,
@@ -140,9 +194,9 @@ namespace trifenix.connect.search
                 num64 = v.Document.num64,
                 rel = v.Document.rel,
                 str = v.Document.str,
-                sug = v.Document.sug
-
-
+                sug = v.Document.sug,
+                hh = v.Document.hh,
+                hm = v.Document.hm,
             }).ToList();
 
             return filterResult;
@@ -153,7 +207,7 @@ namespace trifenix.connect.search
         public void EmptyIndex()
         {
             var indexName = Index;
-            _search.Indexes.Delete(indexName);
+            _searchIndex.DeleteIndex(indexName);
             CreateOrUpdateIndex();
         }
         /// <summary>
@@ -163,7 +217,14 @@ namespace trifenix.connect.search
         {
             var indexName = Index;
             // creación del índice.
-            _search.Indexes.CreateOrUpdate(new Index { Name = indexName, Fields = FieldBuilder.BuildForType<EntitySearch>(), CorsOptions = corsOptions, Suggesters = new List<Suggester> { new Suggester { Name="sug", SourceFields=new List<string> { "sug/value" } } } });
+            FieldBuilder fieldBuilder = new FieldBuilder();
+            var searchFields = fieldBuilder.Build(typeof(EntitySearch));
+
+            var definition = new SearchIndex(indexName, searchFields);
+
+            definition.Suggesters.Add(new SearchSuggester("sug", new List<string> { "sug/value" }));
+            //definition.CorsOptions = this.corsOptions;
+            _searchIndex.CreateOrUpdateIndex(definition);
         }
 
 
@@ -178,6 +239,6 @@ namespace trifenix.connect.search
                 DeleteElements(elements);
         }
 
-      
+
     }
 }

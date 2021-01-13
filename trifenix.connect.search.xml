@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>trifenix.connect.search</name>
+    </assembly>
+    <members>
+        <member name="T:trifenix.connect.search.MainSearch">
+            <summary>
+            Encargada de hacer operaciones CRUD sobre azure search.
+            Esta clase no debiera ser testeada
+            </summary>
+            <typeparam name="GeoPointType">Tipo de dato para geolocalización</typeparam>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.#ctor(System.String,System.String,System.String)">
+            <summary>
+            Constructor mainSearch
+            </summary>
+            <param name="uriService">endpoint de azure search</param>
+            <param name="SearchServiceKey">key</param>
+            <param name="entityIndex">índice del azure search</param>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.OperationElements``1(System.Collections.Generic.List{``0},trifenix.connect.mdm.enums.SearchOperation)">
+            <summary>
+            Añade o elimina items dentro de azure search.
+            </summary>
+            <typeparam name="T">El tipo solo puede ser una entidad soportada dentro de azure search, se validará que cumpla</typeparam>
+            <param name="elements">elementos a guardar dentro del search</param>
+            <param name="operationType">Tipo de operación Añadir o borrar</param>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.AddElements(System.Collections.Generic.List{trifenix.connect.mdm.entity_model.IEntitySearch{Microsoft.Spatial.GeographyPoint}})">
+            <summary>
+            Añade elementos al search.
+            </summary>
+            <typeparam name="T">Esto debería ser EntitySearch</typeparam>
+            <param name="elements"></param>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.AddElement(trifenix.connect.mdm.entity_model.IEntitySearch{Microsoft.Spatial.GeographyPoint})">
+            <summary>
+            Añade un elemento al search.
+            </summary>
+            <typeparam name="T">Esto debería ser EntitySearch</typeparam>
+            <param name="elements"></param>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.DeleteElements(System.Collections.Generic.List{trifenix.connect.mdm.entity_model.IEntitySearch{Microsoft.Spatial.GeographyPoint}})">
+            <summary>
+            Borra elementos desde el search.
+            </summary>        
+            <param name="elements">entidades a eliminar</param>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.FilterElements(System.String)">
+            <summary>
+            filtra elementos del search de acuerdo a una conuslta
+            </summary>
+            <param name="filter">filtro de azure (Odata)</param>
+            <returns>Entidades encontradas</returns>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.EmptyIndex">
+            <summary>
+            Vacía el índice.
+            </summary>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.CreateOrUpdateIndex">
+            <summary>
+            Crea o actualiza el índice en el azure search.
+            </summary>
+        </member>
+        <member name="M:trifenix.connect.search.MainSearch.DeleteElements(System.String)">
+            <summary>
+            Borrar elementos de azure search de acuerdo auna consulta
+            </summary>        
+            <param name="query">consulta de elementos a eliminar</param>
+        </member>
+    </members>
+</doc>
