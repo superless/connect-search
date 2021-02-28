@@ -9,7 +9,7 @@
             Encargada de hacer operaciones CRUD sobre azure search.
             Esta clase no debiera ser testeada
             </summary>
-            <typeparam name="GeoPointType">Tipo de dato para geolocalización</typeparam>
+            <typeparam name="GeographyPoint">Tipo de dato para geolocalización</typeparam>
         </member>
         <member name="M:trifenix.connect.search.MainSearch.#ctor(System.String,System.String,System.String)">
             <summary>

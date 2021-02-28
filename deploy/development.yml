@@ -2,36 +2,39 @@ trigger:
     branches:
       include:        
         - develop
-        - release/*
-  
+
 pool:
-  vmImage: "ubuntu-16.04"
+  vmImage: "windows-latest"
 
 variables: 
   BuildConfiguration: 'release'
   # nombre del archivo csproj
   name-project: "trifenix.connect.search"
-
-  
+  branch: "develop"
+  user: trifenix
+  email: devops@trifenix.io
+    
 # github ejecuta este build, para validar y ejecutar,
 # es decir, dos veces
 # esta instrucción asigna que no se ejecute en el pull request (para validar).
 # sino, que solo se ejecute al modificar la rama.
 pr: none
-  
+ 
+
+
+
 steps:
-
-  - task: gitversion/setup@0
+  # generamos versión del paquete.
+  - task: PowerShell@2
     inputs:
-      versionSpec: '5.1'
-      includePrerelease: true
-    displayName : "Configurando gitversion"
+      targetType: 'inline'
+      script: |
+        dotnet tool install trifenix.versions.console -g
+        $currentVersion = trifenix-versions update $(trifenix-versions) --token $(script-token) --user $(user) --email $(email) --branch $(branch) --name $(name-project) --ktype nuget --build $(Build.BuildId)        
+        $setVersion = '##vso[task.setvariable variable=version;]' + $currentVersion
+        Write-Host $setVersion
+    displayName: generando variable version con TRIFENIX VERSIONS
 
-  - task: gitversion/execute@0
-    inputs:
-      useConfigFile: false      
-    displayName: "generando la nueva versión"
-  
   # toma todos los proyectos que existan además de quien tiene el nuget.
   - task: DotNetCoreCLI@2
     inputs:
@@ -40,18 +43,15 @@ steps:
       feedsToUse: 'select'
       vstsFeed: '$(draft-feed)'      
       versioningScheme: byBuildNumber
+    displayName: restore dotnet
 
-
-  # genera paquete usando la versión proporcionada por gitversion
-  - task: DotNetCoreCLI@2
-    displayName: 'dotnet pack' 
-    inputs: 
-      command: pack
-      packagesToPack: '**/$(name-project).csproj'       
-      arguments: '--configuration $(BuildConfiguration) /p:Version=$(SemVer)' 
-      versioningScheme: byEnvVar 
-      versionEnvVar: SemVer
-
+  - task: CmdLine@2
+    inputs:
+      script: |
+        dotnet pack $(name-project).csproj --configuration $(BuildConfiguration) /p:Version=$(version) --output $(Build.ArtifactStagingDirectory)
+    displayName: dotnet pack
+    
+  
   # publica paquete para publicar.
   - task: PublishBuildArtifacts@1
     inputs:

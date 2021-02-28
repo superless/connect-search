@@ -3,7 +3,7 @@
 trigger:
     branches:
       include:        
-        - master  
+        - feature/hello-world  
 pool:
   vmImage: "windows-latest"
 
@@ -11,18 +11,15 @@ variables:
   BuildConfiguration: 'release'
   # nombre del archivo csproj
   name-project: "trifenix.connect.search"
-  branch: "master"
+  branch: "feature/hello-world"
   user: trifenix
   email: devops@trifenix.io
-
   
 # github ejecuta este build, para validar y ejecutar,
 # es decir, dos veces
 # esta instrucción asigna que no se ejecute en el pull request (para validar).
 # sino, que solo se ejecute al modificar la rama.
 pr: none
-
-
   
 steps:
 
@@ -37,6 +34,8 @@ steps:
         Write-Host $setVersion
     displayName: generando variable version con TRIFENIX VERSIONS
 
+
+  
   
   #toma todos los proyectos que existan además de quien tiene el nuget.
   - task: DotNetCoreCLI@2
@@ -44,7 +43,7 @@ steps:
       command: 'restore'
       projects: '**/*.csproj'
       feedsToUse: 'select'
-      vstsFeed: '$(default-feed)'      
+      vstsFeed: '$(draft-feed)'      
       versioningScheme: byBuildNumber
     displayName: restore dotnet
 
@@ -55,7 +54,7 @@ steps:
         dotnet pack $(name-project).csproj --configuration $(BuildConfiguration) /p:Version=$(version) --output $(Build.ArtifactStagingDirectory)
     displayName: dotnet pack
     
-
+ 
   # publica paquete para publicar.
   - task: PublishBuildArtifacts@1
     inputs:

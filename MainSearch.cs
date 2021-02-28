@@ -20,7 +20,7 @@ namespace trifenix.connect.search
     /// Encargada de hacer operaciones CRUD sobre azure search.
     /// Esta clase no debiera ser testeada
     /// </summary>
-    /// <typeparam name="GeoPointType">Tipo de dato para geolocalización</typeparam>
+    /// <typeparam name="GeographyPoint">Tipo de dato para geolocalización</typeparam>
     public class MainSearch : IBaseEntitySearch<GeographyPoint>
     {
 
@@ -50,14 +50,20 @@ namespace trifenix.connect.search
         public MainSearch(string uriService, string SearchServiceKey, string entityIndex)
         {
 
-            _searchIndex = new SearchIndexClient(new Uri(uriService), new AzureKeyCredential(SearchServiceKey));
+            _searchIndex = new SearchIndexClient(new Uri(uriService), new AzureKeyCredential(SearchServiceKey), new SearchClientOptions { 
+                
+            
+            });
+            
+            
+
             this.Index = entityIndex;
 
             this.UriService = uriService;
             this.ServiceKey = SearchServiceKey;
 
             try
-            {
+            {   
                 _searchIndex.GetIndex(entityIndex);
             }
             catch (RequestFailedException exc)
@@ -221,10 +227,15 @@ namespace trifenix.connect.search
             var searchFields = fieldBuilder.Build(typeof(EntitySearch));
 
             var definition = new SearchIndex(indexName, searchFields);
-
+            var cors_option = new CorsOptions(new List<string> { "*" });
+            cors_option.MaxAgeInSeconds = 300;
+            definition.CorsOptions = cors_option;
             definition.Suggesters.Add(new SearchSuggester("sug", new List<string> { "sug/value" }));
             //definition.CorsOptions = this.corsOptions;
             _searchIndex.CreateOrUpdateIndex(definition);
+            
+            
+
         }
 
 
